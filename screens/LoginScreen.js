@@ -12,19 +12,24 @@ import {  Text, TextInput, Alert, ScrollView, Keyboard , SafeAreaView} from 'rea
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { registration, signIn } from '../firebase_utility/firebaseMethods';
 // import { useState } from "react/cjs/react.production.min";
-const LoginScreen = ({ navigation }) => {
+import Icon from 'react-native-vector-icons/Feather';
+import { logIn } from "../components/styles";
+import { SocialIcon } from 'react-native-elements'
+
+export default function LoginScreen(props) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(true);
 
   const emptyState = () => {
     setEmail('');
     setPassword('');
   };
   const handlePressSignup = () => {
-    navigation.navigate('SignUp')
+    props.navigation.navigate('SignUp')
   };
   const handleSignIn = () => {
     if (!email) {
@@ -33,12 +38,11 @@ const LoginScreen = ({ navigation }) => {
       Alert.alert('Password field is required.');
     }
     else {
-      signIn(
-        email,
-        password
-      );
-      navigation.navigate('NewProfile');
-      emptyState();
+      firebase
+      .auth()
+      .signInWithEmailAndPassword(email, password)
+      // navigation.navigate('NewProfile');
+      // emptyState();
     }
   };
   const isUserEqual = (googleUser, firebaseUser) => {
@@ -81,8 +85,9 @@ const LoginScreen = ({ navigation }) => {
               if (result.additionalUserInfo.isNewUser) {
                 
                 firebase
-                  .database()
-                  .ref('/users/' + result.user.uid)
+                  .firestore()
+                  .collection('users')
+                  .doc(result.user.uid)
                   .set({
                     gmail: result.user.email,
                     profile_picture: result.additionalUserInfo.profile.picture,
@@ -95,7 +100,7 @@ const LoginScreen = ({ navigation }) => {
                     
                     
                   );
-                  navigation.navigate("Profile", {result})
+                  // navigation.navigate("Profile", {result})
               } else {
                 
                 
@@ -110,7 +115,7 @@ const LoginScreen = ({ navigation }) => {
                     //navigation.navigate("Profile", {result})
                   );
                  
-                navigation.navigate("Profile", {result});
+                // navigation.navigate("Profile", {result});
                   
               }
             })
@@ -128,7 +133,7 @@ const LoginScreen = ({ navigation }) => {
           console.log('User already signed-in Firebase.');
           
           
-        navigation.navigate("Profile", {googleUser});
+        // navigation.navigate("Profile", {googleUser});
         }
       }.bind(this)
     );
@@ -187,50 +192,82 @@ const LoginScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-       <Text style={styles.text}>Create an account </Text>
+    <View style={logIn.container}>
+      
+      <Text style={logIn.loginHeadText}>Log In </Text>
+      
+       
 
 <ScrollView onBlur={Keyboard.dismiss}>
+  <View style={{
+            // paddingVertical: 15,
+            // paddingHorizontal: 10,
+            flexDirection: "row",
+            // justifyContent: "space-between",
+            // alignItems: "center"
+        }}>
+    <Icon name = 'mail' style={logIn.mailIcon} size={14} color="#900"/>
+    <TextInput
+    style={logIn.mailInput}
+    placeholder="Email Id"
+    placeholderTextColor="#808080" 
+    value={email}
+    onChangeText={(email) => setEmail(email)}
+    keyboardType="email-address"
+    autoCapitalize="none"
+    />
+  </View>
   
+  <View style={{
+            // paddingVertical: 15,
+            // paddingHorizontal: 10,
+            flexDirection: "row",
+            // justifyContent: "space-between",
+            // alignItems: "center"
+        }}>
+  <Icon name = 'lock' style={logIn.passIcon} />
   <TextInput
-   style={styles.textInput}
-   placeholder="Enter your email*"
-   value={email}
-   onChangeText={(email) => setEmail(email)}
-   keyboardType="email-address"
-   autoCapitalize="none"
-  />
-
-   <TextInput
-   style={styles.textInput}
-   placeholder="Enter your password*"
+   style={logIn.passInput}
+   placeholder="Enter your password"
+   placeholderTextColor="#808080" 
    value={password}
    onChangeText={(password) => setPassword(password)}
-   secureTextEntry={true}
-  />
-  
-   <TouchableOpacity style={styles.button} onPress={handlePressSignup}>
-    <Text style={styles.buttonText}>Sign Up</Text>
-   </TouchableOpacity>
+   secureTextEntry={passwordVisible}
+    // right={<Icon name={passwordVisible ? "eye" : "eye-off"} onPress={() => setPasswordVisible(!passwordVisible)} />}
 
-   <TouchableOpacity style={styles.button} onPress={handleSignIn}>
-     <Text style={styles.buttonText}>Sign In</Text>
+  />
+  </View>  
+
+   
+  
+  <View style={logIn.signInBox}>
+  <TouchableOpacity  onPress={handleSignIn}>
+     <Text style={logIn.signInText}>Log In</Text>
+  
+
+  
    </TouchableOpacity>
-      <Button title="Login with Google" onPress={signInAsync} />
+   </View>
+   <View  style={logIn.singUp} >
+   <TouchableOpacity onPress={handlePressSignup}>
+    <Button style={logIn.signUpText} onPress={handlePressSignup} title ="New User? Sign Up"/>
+   </TouchableOpacity>
+  
+   
+   </View>
+   <View style={logIn.GoogleSignIn}>
+     <TouchableOpacity onPress={signInAsync}>
+     <SocialIcon
+          type='google'
+        />
+     </TouchableOpacity>
+   {/* <Button title="Login with Google" onPress={signInAsync} /> */}
+   </View>
+
+     
     </ScrollView>  
     </View>
   );
-};
+}
 
-export default LoginScreen;
-
-const styles = StyleSheet.create({
-
-  textInput: {
-    paddingTop: 10,
-    paddingRight: 15,
-    fontSize: 34,
-    color: 'white',
-    fontWeight: '500'
-  }
-});
+// export default LoginScreen;

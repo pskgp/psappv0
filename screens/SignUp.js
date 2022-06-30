@@ -1,135 +1,124 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Alert, ScrollView, Keyboard ,StyleSheet, SafeAreaView} from 'react-native';
+import { Button, Text, TextInput, View } from 'react-native';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { registration } from '../firebase_utility/firebaseMethods';
+import { useNavigation } from '@react-navigation/native';
+import { container, form } from '../components/styles';
+import { Snackbar } from 'react-native-paper';
+import firebase from "firebase/compat/app";
+import "firebase/compat/auth";
+import "firebase/compat/storage";
+import "firebase/compat/firestore";
+import OnBoardingScreen from "./OnBoardingScreen";
 
-export default function SignUp({ navigation }) {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+export default function SignUp(props) {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+    const [password, setPassword] = useState('');
+    const [name, setName] = useState('');
+    const [username, setUsername] = useState('');
+    const [isValid, setIsValid] = useState(true);
+    const [isSaved,setIsSaved] = useState(false);
 
-  const emptyState = () => {
-    setFirstName('');
-    setLastName('');
-    setEmail('');
-    setPassword('');
-    setConfirmPassword('');
-  };
+    const onRegister = () => {
+        if (name.lenght == 0 || username.lenght == 0 || email.length == 0 || password.length == 0) {
+            setIsValid({ bool: true, boolSnack: true, message: "Please fill out everything" })
+            return;
+        }
+        if (password.length < 6) {
+            setIsValid({ bool: true, boolSnack: true, message: "passwords must be at least 6 characters" })
+            return;
+        }
+        if (password.length < 6) {
+            setIsValid({ bool: true, boolSnack: true, message: "passwords must be at least 6 characters" })
+            return;
+        }
+        firebase.firestore()
+            .collection('users')
+            .where('username', '==', username)
+            .get()
+            .then((snapshot) => {
 
-  const handlePress = () => {
-    if (!firstName) {
-      Alert.alert('First name is required');
-    } else if (!email) {
-      Alert.alert('Email field is required.');
-    } else if (!password) {
-      Alert.alert('Password field is required.');
-    } else if (!confirmPassword) {
-      setPassword('');
-      Alert.alert('Confirm password field is required.');
-    } else if (password !== confirmPassword) {
-      Alert.alert('Password does not match!');
-    } else {
-      registration(
-        email,
-        password,
-        lastName,
-        firstName,
-      );
-      navigation.navigate('Profile');
-      emptyState();
+                if (!snapshot.exist) {
+                    firebase.auth().createUserWithEmailAndPassword(email, password)
+                        .then(() => {
+                            if (snapshot.exist) {
+                                return
+                            }
+                            firebase.firestore().collection("users")
+                                .doc(firebase.auth().currentUser.uid)
+                                .set({
+                                    name,
+                                    email,
+                                    username,
+                                    image: 'default',
+                                    
+
+                                }).then(() => {
+                                    setIsSaved(true);
+                                })
+                            
+                        })
+                        .catch(() => {
+                            setIsValid({ bool: true, boolSnack: true, message: "Something went wrong" })
+                        })
+                }
+            }).catch(() => {
+                setIsValid({ bool: true, boolSnack: true, message: "Something went wrong" })
+            })
+            if (isSaved){
+                props.navigation.navigate('OnBoarding');
+            }
+            
+
     }
-  };
 
-  return (
-    <SafeAreaView>
-     <View style={styles.container}>
-       <Text style={styles.text}>Create an account </Text>
+    return (
+        <View style={container.center}>
+            <View style={container.formCenter}>
+                <TextInput
+                    style={form.textInput}
+                    placeholder="Username"
+                    value={username}
+                    keyboardType="twitter"
+                    onChangeText={(username) => setUsername(username.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '').replace(/[^a-z0-9]/gi, ''))}
+                />
+                <TextInput
+                    style={form.textInput}
+                    placeholder="name"
+                    onChangeText={(name) => setName(name)}
+                />
+                <TextInput
+                    style={form.textInput}
+                    placeholder="email"
+                    onChangeText={(email) => setEmail(email)}
+                />
+                <TextInput
+                    style={form.textInput}
+                    placeholder="password"
+                    secureTextEntry={true}
+                    onChangeText={(password) => setPassword(password)}
+                />
 
-       <ScrollView onBlur={Keyboard.dismiss}>
-          <TextInput
-          style={styles.textInput}
-          placeholder="First name*"
-          value={firstName}
-          onChangeText={(name) => setFirstName(name)}
-          />
-         <TextInput
-          style={styles.textInput}
-          placeholder="Last name"
-          value={lastName}
-          onChangeText={(name) => setLastName(name)}
-         />
+                <Button
+                    style={form.button}
+                    onPress={() => onRegister()}
+                    title="Register"
+                />
+            </View>
 
-         <TextInput
-          style={styles.textInput}
-          placeholder="Enter your email*"
-          value={email}
-          onChangeText={(email) => setEmail(email)}
-          keyboardType="email-address"
-          autoCapitalize="none"
-         />
+            <View style={form.bottomButton} >
+                <Text
+                    onPress={() => props.navigation.navigate("Login")} >
+                    Already have an account? SignIn.
+                </Text>
+            </View>
+            <Snackbar
+                visible={isValid.boolSnack}
+                duration={2000}
+                onDismiss={() => { setIsValid({ boolSnack: false }) }}>
+                {isValid.message}
+            </Snackbar>
+        </View>
 
-          <TextInput
-          style={styles.textInput}
-          placeholder="Enter your password*"
-          value={password}
-          onChangeText={(password) => setPassword(password)}
-          secureTextEntry={true}
-         />
-         <TextInput
-          style={styles.textInput}
-          placeholder="Retype your password to confirm*"
-          value={confirmPassword}
-          onChangeText={(password2) => setConfirmPassword(password2)}
-          secureTextEntry={true}
-          />
-          <TouchableOpacity style={styles.button} onPress={handlePress}>
-           <Text style={styles.buttonText}>Sign Up</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.inlineText}>Already have an account?</Text>
-          <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Sign In')}>
-            <Text style={styles.buttonText}>Sign In</Text>
-          </TouchableOpacity>
-       </ScrollView>
-     </View>
-    </SafeAreaView>
-  );
+    )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: '500',
-    fontStyle: 'italic',
-    marginBottom: 30,
-  },
-  attrContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  text: {
-    fontSize: 22,
-  },
-  textInput: {
-    borderColor: 'gray',
-    borderWidth: 1,
-    fontSize: 22,
-    paddingHorizontal: 5,
-    textAlign: 'center',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '75%',
-    marginTop: 30,
-  },
-});
